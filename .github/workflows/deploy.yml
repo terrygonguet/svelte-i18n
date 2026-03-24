@@ -27,9 +27,9 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           rm: true
-          source: "demo-app/build"
+          source: "demo-app/build/*"
           target: "/root/auto-i18n/demo-app/build"
-          strip_components: 1
+          strip_components: 2
       - name: PM2 restart
         uses: appleboy/ssh-action@v1
         with:
