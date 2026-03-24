@@ -1,3 +1,4 @@
+import { env } from "$env/dynamic/private"
 import { db, schema } from "$minilib/db/index.js"
 import {
 	createAutoI18NHandle,
@@ -83,6 +84,8 @@ const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, l
 }
 
 export const i18nHandle = createAutoI18NHandle({
+	supportedLangs: env.SUPPORTED_LANGS.split(","),
+	fallbackLang: env.FALLBACK_LANG,
 	fetchCategory,
 	fetchAll,
 	update,

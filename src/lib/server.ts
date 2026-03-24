@@ -1,5 +1,4 @@
-import { env } from "$env/dynamic/private"
-import { json, type Handle, type RequestEvent, type ResolveOptions } from "@sveltejs/kit"
+import { json, type Handle, type RequestEvent } from "@sveltejs/kit"
 import { AutoI18N } from "@terrygonguet/auto-i18n"
 import { safeParse } from "@terrygonguet/utils/json"
 import { safe } from "@terrygonguet/utils/result"
@@ -7,6 +6,9 @@ import { safe } from "@terrygonguet/utils/result"
 type MaybePromise<T> = T | Promise<T>
 
 export interface CreateAutoI18NHandlerOptions {
+	supportedLangs: string[]
+	fallbackLang: string
+
 	fetchCategory(options: {
 		where: { lang: string; category: string }
 		event: RequestEvent
@@ -38,6 +40,8 @@ export interface CreateAutoI18NHandlerOptions {
 }
 
 export function createAutoI18NHandle({
+	supportedLangs,
+	fallbackLang,
 	fetchCategory,
 	canFetchCategory,
 	fetchAll,
@@ -137,9 +141,9 @@ export function createAutoI18NHandle({
 		}
 
 		const i18n = new AutoI18N({
-			lang: env.FALLBACK_LANG,
-			supportedLangs: env.SUPPORTED_LANGS.split(","),
-			fallbackLang: env.FALLBACK_LANG,
+			lang: fallbackLang,
+			supportedLangs,
+			fallbackLang,
 			fetch: event.fetch,
 			mode: "normal",
 		})
