@@ -12,9 +12,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3.9.1
         with:
-          node-version: 22
+          node-version: 24
       - name: Build
         run: |
+          cd demo-app
           npm ci
           npm run build
       - name: Upload artefacts
@@ -24,7 +25,7 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           rm: true
-          source: "build/*"
+          source: "demo-app/build/*"
           target: "/root/auto-i18n/build"
           strip_components: 1
       - name: PM2 restart
@@ -34,5 +35,5 @@ jobs:
           username: ${{ secrets.USERNAME }}
           password: ${{ secrets.PASSWORD }}
           script: |
-            PATH=$PATH:/root/.nvm/versions/node/v22.15.0/bin
+            PATH=$PATH:/root/.nvm/versions/node/v24.14.0/bin
             pm2 restart auto-i18n
