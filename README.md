@@ -1,3 +1,3 @@
-# ![temp icon](/static/favicon.svg) `@terrygonguet/auto-i18n`
+# ![temp icon](/static/favicon.svg) `@terrygonguet/svelte-i18n`
 
-Some documentation and examples are available at [auto-i18n.gonguet.com](http://auto-i18n.gonguet.com).
+Some documentation and examples are available at [svelte-i18n.gonguet.com](http://svelte-i18n.gonguet.com).

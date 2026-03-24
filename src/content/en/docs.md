@@ -3,26 +3,26 @@
 ## Installation {#installation}
 
 ```sh
-npm install @terrygonguet/auto-i18n
+npm install @terrygonguet/svelte-i18n
 ```
 
 ## Usage {#usage}
 
-Until the Svelte ecosystem agrees on a way to add plugins to SvelteKit, you'll have to integrate the different parts of `auto-i18n` into your app yourself. Don't worry it's pretty easy 😉.
+Until the Svelte ecosystem agrees on a way to add plugins to SvelteKit, you'll have to integrate the different parts of `svelte-i18n` into your app yourself. Don't worry it's pretty easy 😉.
 
-`auto-i18n` makes extensive use of Svelte 5's reactivity primitives. All you have to do is use simple functions and we handle the auto loading and caching and acrobatics needed to have SSR and our cool editor. The function calls will be re-run whenever needed to keep your UI in sync.
+`svelte-i18n` makes extensive use of Svelte 5's reactivity primitives. All you have to do is use simple functions and we handle the auto loading and caching and acrobatics needed to have SSR and our cool editor. The function calls will be re-run whenever needed to keep your UI in sync.
 
-Like pants, `auto-i18n` comes in two parts: [client](#usage-client) and [server](#usage-server). The server part adds routes to your app so the client can load translations and send new ones. The client part serves as an internationalisation library and loads the editor for changing the translations.
+Like a bikini, `svelte-i18n` comes in two parts: [client](#usage-client) and [server](#usage-server). The server part adds routes to your app so the client can load translations and send new ones. The client part serves as an internationalisation library and loads the editor for changing the translations.
 
 ### Server {#usage-server}
 
-On the server most of the business happens in the `hooks.server.ts` file. You can import the `createAutoI18NHandle` function from `@terrygonguet/auto-i18n/server` and use it to create the titular handle function. This function is a fully self contained [handle](https://svelte.dev/docs/kit/@sveltejs-kit#Handle) hook and can be added to your app via the [sequence](https://svelte.dev/docs/kit/@sveltejs-kit-hooks#sequence) function.
+On the server most of the business happens in the `hooks.server.ts` file. You can import the `createSvelteI18NHandle` function from `@terrygonguet/svelte-i18n/server` and use it to create the titular handle function. This function is a fully self contained [handle](https://svelte.dev/docs/kit/@sveltejs-kit#Handle) hook and can be added to your app via the [sequence](https://svelte.dev/docs/kit/@sveltejs-kit-hooks#sequence) function.
 
 ```ts filename=hooks.server.ts
 import { sequence } from "@sveltejs/kit/hooks"
-import { createAutoI18NHandle } from "@terrygonguet/auto-i18n/server"
+import { createSvelteI18NHandle } from "@terrygonguet/svelte-i18n/server"
 
-const i18nHandle = createAutoI18NHandle({
+const i18nHandle = createSvelteI18NHandle({
 	fetchCategory,
 	canFetchCategory,
 	fetchAll,
@@ -39,13 +39,13 @@ export const handle = sequence(i18nHandle, ({ event, resolve }) => {
 
 You probably want to run this function after your session/authentication but before the rest of SvelteKit.
 
-All the values passed to the `createAutoI18NHandle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `auto-i18n` expects. Please refer to the [API](#api) section for details.
+All the values passed to the `createSvelteI18NHandle` function are functions too. Those whose name start with "can" are guards, allowing you to grant or deny access to any part of the generated routes. The other functions are here to transfer data from your storage solution to the format that `svelte-i18n` expects. Please refer to the [API](#api) section for details.
 
 ### Client {#usage-client}
 
-The client side is more involved. Fundamentally, all you have to do is create an instance of the `AutoI18N` class and pass it around. Your components can then use the `translate()` (aliased to `t()`) method to display the translation strings.
+The client side is more involved. Fundamentally, all you have to do is create an instance of the `SvelteI18N` class and pass it around. Your components can then use the `translate()` (aliased to `t()`) method to display the translation strings.
 
-As usual, everything gets more complex when we take SSR into account. The recommended flow is to have a `layout.server.ts` file to resolve which language to display to the user; a `layout.ts` file to create the `AutoI18N` instance that will be available throughout your application and now you can use [`page.data`](https://svelte.dev/docs/kit/@sveltejs-kit#Page) or [`$props().data`](https://svelte.dev/docs/kit/load#Page-data) (for pages) to get your translation strings anywhere.
+As usual, everything gets more complex when we take SSR into account. The recommended flow is to have a `layout.server.ts` file to resolve which language to display to the user; a `layout.ts` file to create the `SvelteI18N` instance that will be available throughout your application and now you can use [`page.data`](https://svelte.dev/docs/kit/@sveltejs-kit#Page) or [`$props().data`](https://svelte.dev/docs/kit/load#Page-data) (for pages) to get your translation strings anywhere.
 
 ```ts filename=layout.server.ts
 export const load = async ({ cookies, request }) => {
@@ -56,7 +56,7 @@ export const load = async ({ cookies, request }) => {
 
 ```ts filename=layout.ts
 export const load = async ({ fetch, data: { lang, supportedLangs, fallbackLang } }) => {
-	const i18n = new AutoI18N({ lang, supportedLangs, fallbackLang, fetch })
+	const i18n = new SvelteI18N({ lang, supportedLangs, fallbackLang, fetch })
 	return { i18n, t: i18n.t.bind(i18n), c: i18n.c.bind(i18n) }
 }
 ```
@@ -84,7 +84,7 @@ From there, you can write whatever code you want to trigger `i18n.showEditor()` 
 
 ## Interpolation {#interpolation}
 
-Static strings are not enough to fully localize an application, some parts of the text must be dynamic. To that end, `auto-i18n` has a few interpolation utilities.
+Static strings are not enough to fully localize an application, some parts of the text must be dynamic. To that end, `svelte-i18n` has a few interpolation utilities.
 
 ### Simple value insertion `{{name}}`
 
@@ -128,7 +128,7 @@ If your string contains `"I have {{$match n 0:no 1:one _:lots of}} sheep"`, call
 
 ## The editor {#editor}
 
-The editor is `auto-i18n`'s super power. We don't have an opinion on how to trigger showing the editor, all you have to do is call `showEditor()` on your `AutoI18N` instance; and then call `hideEditor()` when you're done.
+The editor is `svelte-i18n`'s super power. We don't have an opinion on how to trigger showing the editor, all you have to do is call `showEditor()` on your `SvelteI18N` instance; and then call `hideEditor()` when you're done.
 
 Once the editor is open, all you have to do is click on the string you want to edit and a dialog will open, allowing you to make any changes you want. If you cannot click on the text itself, there is a "see all" button in a corner of the screen that will list all the keys used on the page.
 
@@ -136,9 +136,9 @@ This is possible because of Svelte's [{@html ...} tag](https://svelte.dev/docs/s
 
 ## API {#api}
 
-### class `AutoI18N` from `@terrygonguet/auto-i18n`
+### class `SvelteI18N` from `@terrygonguet/svelte-i18n`
 
-#### `constructor(options: AutoI18NConstructorOptions)`
+#### `constructor(options: SvelteI18NConstructorOptions)`
 
 - `options.lang: string` - the language in which to diplay your app to the user
 - `options.supportedlangs: string[]` - a list of all the languages supported by your app
@@ -202,7 +202,7 @@ Gets and interpolate a translation string.
 
 Aliased as `c()`.
 
-Inserts some external HTML **without any sanitizing**. This function does nothing to the `content` but makes `auto-i18n` aware of it, so we can show you something when the editor is open.
+Inserts some external HTML **without any sanitizing**. This function does nothing to the `content` but makes `svelte-i18n` aware of it, so we can show you something when the editor is open.
 
 - `content: string` - the raw HTML content to insert
 - `options.url: string` - an optional url to where the content can be edited
@@ -244,7 +244,7 @@ Loads and mounts the editor component. See the section on [the editor](#editor) 
 
 Hides and unmounts the editor component.
 
-### `createAutoI18NHandle` from `@terrygonguet/auto-i18n/server`
+### `createSvelteI18NHandle` from `@terrygonguet/svelte-i18n/server`
 
 Helper function to create a single handler that behaves like registering multiple API endpoints. The function takes an object of hooks that will be called to interact with your system.
 

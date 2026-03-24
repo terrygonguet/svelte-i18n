@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { AutoI18N } from "@terrygonguet/auto-i18n"
+	import type { SvelteI18N } from "@terrygonguet/svelte-i18n"
 	import { getContext } from "svelte"
 
 	interface Props {
@@ -9,7 +9,7 @@
 
 	let { autoload = false, onSeeAll }: Props = $props()
 
-	let i18n = getContext<AutoI18N>("i18n")
+	let i18n = getContext<SvelteI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
 	let seeAllSide = $state<"end" | "start">("end")
@@ -22,10 +22,10 @@
 <div id="i18n-editor-on-sign">
 	<aside data-side={seeAllSide}>
 		<button id="i18n-editor-see-all" onclick={() => onSeeAll()}>
-			{t("auto-i18n", "see_all", { overrideMissing: "See all" })}
+			{t("svelte-i18n", "see_all", { overrideMissing: "See all" })}
 		</button>
 		<button
-			aria-label={t("auto-i18n", "see_all_switch", { overrideMissing: "Switch side" })}
+			aria-label={t("svelte-i18n", "see_all_switch", { overrideMissing: "Switch side" })}
 			onclick={onSeeAllSwitchClick}
 		>
 			<!-- Icon from https://icons.mono.company -->

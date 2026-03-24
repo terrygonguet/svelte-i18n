@@ -1,19 +1,19 @@
 import { safe } from "@terrygonguet/utils/result"
 import { createSubscriber } from "svelte/reactivity"
-import type { AutoI18NEditor, AutoI18NEditorConfig } from "./editor.svelte"
+import type { SvelteI18NEditor, SvelteI18NEditorConfig } from "./editor.svelte"
 
-export interface AutoI18NConstructorOptions {
+export interface SvelteI18NConstructorOptions {
 	lang: string | (() => string)
 	supportedLangs: string[] | (() => string[])
 	fallbackLang: string | (() => string)
 	preload?: string[]
 	fetch?: typeof fetch
-	mode?: AutoI18N["mode"]
+	mode?: SvelteI18N["mode"]
 }
 
 export interface TOptions {
 	autoload?: boolean
-	editor?: boolean | AutoI18NEditorConfig
+	editor?: boolean | SvelteI18NEditorConfig
 	lang?: string
 	overrideMissing?: string
 	values?: { [name: string]: TValue | undefined }
@@ -25,11 +25,11 @@ export type TValue =
 	| boolean
 	| { prefix?: string; visible: string | number | boolean; suffix?: string }
 
-export class AutoI18N<T extends { [category: string]: string } = Record<string, string>> {
+export class SvelteI18N<T extends { [category: string]: string } = Record<string, string>> {
 	fetch: typeof fetch
 	mode: "normal" | "ssr"
 
-	#editor?: AutoI18NEditor
+	#editor?: SvelteI18NEditor
 	#editorSubscibe: ReturnType<typeof createSubscriber>
 	#editorChange = () => {}
 	get isEditorShown() {
@@ -79,14 +79,14 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 		fetch = globalThis.fetch,
 		//! HACK by default we always start in "ssr" mode to not break hydration
 		mode = "ssr",
-	}: AutoI18NConstructorOptions) {
+	}: SvelteI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
 
 		if (!this.#supportedLangs.includes(this.#lang)) {
 			console.warn(
-				"[auto-i18n] The selected language is not in the list of supported languages, falling back",
+				"[svelte-i18n] The selected language is not in the list of supported languages, falling back",
 				{
 					lang: this.#lang,
 					fallbackLang: this.#fallbackLang,
@@ -97,10 +97,13 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 		}
 
 		if (!this.#supportedLangs.includes(this.#fallbackLang))
-			console.warn("[auto-i18n] The fallback language is not in the list of supported languages", {
-				fallbackLang: this.#fallbackLang,
-				supportedLangs: this.#supportedLangs,
-			})
+			console.warn(
+				"[svelte-i18n] The fallback language is not in the list of supported languages",
+				{
+					fallbackLang: this.#fallbackLang,
+					supportedLangs: this.#supportedLangs,
+				},
+			)
 
 		this.fetch = fetch
 		this.#editorSubscibe = createSubscriber((update) => {
@@ -139,7 +142,7 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 		this.#inFlight.delete(cacheKey)
 
 		if (err) {
-			console.error("[auto-i18n] Failed to load translations", { category, lang }, err)
+			console.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
 			this.#failedCategories.add(cacheKey)
 		} else {
 			this.#loadedCategories.add(category)
@@ -163,7 +166,7 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 			.asTuple()
 		this.#inFlight.delete("all")
 		if (err)
-			console.error("[auto-i18n] Failed to load all translations", { categories, langs }, err)
+			console.error("[svelte-i18n] Failed to load all translations", { categories, langs }, err)
 
 		for (const [lang, categories] of Object.entries<any>(data)) {
 			for (const [category, keys] of Object.entries<any>(categories)) {
@@ -204,7 +207,7 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 		} = options
 
 		//! HACK geez I sure wish I had a record or a tuple...
-		if (category != "auto-i18n") this.#keysInUse.add(JSON.stringify([category, key]))
+		if (category != "svelte-i18n") this.#keysInUse.add(JSON.stringify([category, key]))
 
 		this.#cacheSubscribe()
 		this.#langSubscribe()
@@ -217,8 +220,11 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 		if (this.mode == "ssr") {
 			// In SSR we start the load and return a value to be replaced before sending HTML to client
 			return (
-				"%auto-i18n.t(" +
-				JSON.stringify([lang, category, key, options]).replaceAll(")%", "__auto-i18n__sentinel__") +
+				"%svelte-i18n.t(" +
+				JSON.stringify([lang, category, key, options]).replaceAll(
+					")%",
+					"__svelte-i18n__sentinel__",
+				) +
 				")%"
 			)
 		}
@@ -291,10 +297,10 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 			const expr = text.slice(start + 2, end).trim()
 
 			let match: RegExpExecArray | null = null
-			if ((match = AutoI18N.#regex_$t.exec(expr))) {
+			if ((match = SvelteI18N.#regex_$t.exec(expr))) {
 				const { category, key, lang = this.#lang } = match.groups!
 				value = this.t<any, any>(category, key, { ...options, editor: false, values, lang })
-			} else if ((match = AutoI18N.#regex_$match.exec(expr))) {
+			} else if ((match = SvelteI18N.#regex_$match.exec(expr))) {
 				const { varname, patterns } = match.groups!
 				const matches = Array.from(patterns.matchAll(/(?<amount>[\w_]):/g))
 				const rules: { [amount: string]: string } = {}
@@ -310,7 +316,7 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 				const tvalue = values[varname]
 				let matchResult: string | undefined
 				if (tvalue == undefined) {
-					console.error(`[auto-i18n] Failed to interpolate $match: missing "${varname}" value`, {
+					console.error(`[svelte-i18n] Failed to interpolate $match: missing "${varname}" value`, {
 						expression: expr,
 						values,
 					})
@@ -319,7 +325,7 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 					else matchResult = rules[tvalue.toString()] ?? rules._
 
 					if (matchResult == undefined) {
-						console.warn("[auto-i18n] Tried to interpolate a $match without a default case", {
+						console.warn("[svelte-i18n] Tried to interpolate a $match without a default case", {
 							expression: expr,
 							values,
 						})
@@ -330,18 +336,18 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 						value = (tvalue.prefix ?? "") + matchResult + (tvalue.suffix ?? "")
 					else value = matchResult
 				}
-			} else if ((match = AutoI18N.#regex_base.exec(expr))) {
+			} else if ((match = SvelteI18N.#regex_base.exec(expr))) {
 				const { varname } = match.groups!
 				const tvalue = values[varname]
 				if (typeof tvalue == "object")
 					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
 				else if (tvalue != undefined) value = tvalue.toString()
 				else
-					console.warn("[auto-i18n] Tried to interpolate missing value", {
+					console.warn("[svelte-i18n] Tried to interpolate missing value", {
 						expression: expr,
 						values,
 					})
-			} else if ((match = AutoI18N.#regex_$if.exec(expr))) {
+			} else if ((match = SvelteI18N.#regex_$if.exec(expr))) {
 				const { varname, true: ifTrue, false: ifFalse = "" } = match.groups!
 				const tvalue = values[varname]
 				if (typeof tvalue == "object")
@@ -349,7 +355,7 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 						(tvalue.prefix ?? "") + (tvalue.visible ? ifTrue : ifFalse) + (tvalue.suffix ?? "")
 				else if (tvalue != undefined) value = tvalue ? ifTrue : ifFalse
 				else
-					console.warn("[auto-i18n] Tried to interpolate missing value", {
+					console.warn("[svelte-i18n] Tried to interpolate missing value", {
 						expression: expr,
 						values,
 					})
@@ -383,8 +389,8 @@ export class AutoI18N<T extends { [category: string]: string } = Record<string, 
 
 	async showEditor({ autoload = false } = {}) {
 		if (!this.#editor) {
-			const { AutoI18NEditor } = await import("./editor.svelte")
-			this.#editor = new AutoI18NEditor(this, { autoload })
+			const { SvelteI18NEditor } = await import("./editor.svelte")
+			this.#editor = new SvelteI18NEditor(this, { autoload })
 			this.#editorChange()
 		}
 		this.loadAll()

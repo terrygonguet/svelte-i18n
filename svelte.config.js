@@ -7,9 +7,9 @@ const config = {
 	kit: {
 		adapter: adapter(),
 		alias: {
-			"@terrygonguet/auto-i18n/editor": "src/lib/editor.svelte.js",
-			"@terrygonguet/auto-i18n/server": "src/lib/server.js",
-			"@terrygonguet/auto-i18n": "src/lib/index.js",
+			"@terrygonguet/svelte-i18n/editor": "src/lib/editor.svelte.js",
+			"@terrygonguet/svelte-i18n/server": "src/lib/server.js",
+			"@terrygonguet/svelte-i18n": "src/lib/index.js",
 			"$minilib/*": "src/minilib/*",
 			"$assets/*": "assets/*",
 			"$content/*": "src/content/*",

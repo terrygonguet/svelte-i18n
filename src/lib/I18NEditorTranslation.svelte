@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext, tick } from "svelte"
-	import { type TOptions, type AutoI18N } from "./index.js"
+	import { type TOptions, type SvelteI18N } from "./index.js"
 
 	interface Props {
 		autoload?: boolean
@@ -13,7 +13,7 @@
 
 	let { autoload = false, category, key, values, multiline, onSave }: Props = $props()
 
-	let i18n = getContext<AutoI18N>("i18n")
+	let i18n = getContext<SvelteI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
 	let hasValues = $derived(values && Object.keys(values).length > 0)
@@ -43,12 +43,12 @@
 
 	{#if values == undefined}
 		<p class="i18n-editor-subtitle">
-			{@html t("auto-i18n", "no_values", { overrideMissing: "Values unavailable" })}
+			{@html t("svelte-i18n", "no_values", { overrideMissing: "Values unavailable" })}
 		</p>
 	{:else if hasValues}
 		<div id="i18n-editor-values">
 			<p class="i18n-editor-subtitle">
-				{t("auto-i18n", "title_values", { overrideMissing: "Values" })}
+				{t("svelte-i18n", "title_values", { overrideMissing: "Values" })}
 			</p>
 			{#each Object.entries(values) as [name, value]}
 				<code class="i18n-editor-values-name">{"{{" + name + "}}"}</code>
@@ -64,7 +64,7 @@
 		<div>
 			{#if hasValues}
 				<p class="i18n-editor-subtitle">
-					{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
+					{t("svelte-i18n", "title_translations", { overrideMissing: "Translations" })}
 				</p>
 			{/if}
 			<div id="i18n-editor-multiline">
@@ -84,7 +84,7 @@
 					<div id="i18n-editor-multiline-tabend"></div>
 				</div>
 				{#each i18n.supportedLangs as lang}
-					{@const placeholder = t("auto-i18n", "value_placeholder", {
+					{@const placeholder = t("svelte-i18n", "value_placeholder", {
 						overrideMissing: "Missing value",
 					})}
 					<!-- svelte-ignore a11y_autofocus -->
@@ -105,7 +105,7 @@
 		<div id="i18n-editor-monoline">
 			{#if hasValues}
 				<p class="i18n-editor-subtitle">
-					{t("auto-i18n", "title_translations", { overrideMissing: "Translations" })}
+					{t("svelte-i18n", "title_translations", { overrideMissing: "Translations" })}
 				</p>
 			{/if}
 			{#each i18n.supportedLangs as lang}
@@ -115,7 +115,7 @@
 					class="i18n-editor-monoline-value"
 					name={lang}
 					value={i18n.raw(category, key, { lang })}
-					placeholder={t("auto-i18n", "value_placeholder", {
+					placeholder={t("svelte-i18n", "value_placeholder", {
 						overrideMissing: "Missing value",
 					})}
 				/>
@@ -125,17 +125,17 @@
 	{/if}
 
 	<button type="submit" id="i18n-editor-save">
-		{t("auto-i18n", "btn_save", { overrideMissing: "Save" })}
+		{t("svelte-i18n", "btn_save", { overrideMissing: "Save" })}
 	</button>
 </form>
 
-{#snippet langIndicators(i18n: AutoI18N, t: AutoI18N["t"], lang: string)}
+{#snippet langIndicators(i18n: SvelteI18N, t: SvelteI18N["t"], lang: string)}
 	{#if lang == i18n.lang}
-		{@const label = t("auto-i18n", "lang_current", { overrideMissing: "Current" })}
+		{@const label = t("svelte-i18n", "lang_current", { overrideMissing: "Current" })}
 		<span class="i18n-editor-indicator-cur" title={label}>{label.charAt(0)}</span>
 	{/if}
 	{#if lang == i18n.fallbackLang}
-		{@const label = t("auto-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
+		{@const label = t("svelte-i18n", "lang_fallback", { overrideMissing: "Fallback" })}
 		<span class="i18n-editor-indicator-fb" title={label}>{label.charAt(0)}</span>
 	{/if}
 {/snippet}

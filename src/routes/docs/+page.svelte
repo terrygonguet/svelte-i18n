@@ -14,7 +14,7 @@
 <main in:fade={fadeParams.in} out:fade={fadeParams.out} class="py-12">
 	<div class="prose mx-auto w-full">
 		{@html i18n.c(data.content, {
-			url: `https://github.com/terrygonguet/auto-i18n/blob/main/src/content/${i18n.lang}/docs.md`,
+			url: `https://github.com/terrygonguet/svelte-i18n/blob/main/src/content/${i18n.lang}/docs.md`,
 		})}
 	</div>
 </main>

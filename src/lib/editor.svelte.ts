@@ -1,4 +1,4 @@
-import type { AutoI18N, TOptions } from "./index.js"
+import type { SvelteI18N, TOptions } from "./index.js"
 import I18NEditorDialog, {
 	type EditorCloseRadio,
 	type EditorOpenRadio,
@@ -13,12 +13,12 @@ export { I18NEditorDialog }
 
 const html = String.raw
 
-export interface AutoI18NEditorConfig {
+export interface SvelteI18NEditorConfig {
 	multiline?: boolean
 }
 
-export class AutoI18NEditor {
-	i18n: AutoI18N
+export class SvelteI18NEditor {
+	i18n: SvelteI18N
 
 	#dialogOpenRadio: EditorOpenRadio = createRadio()
 	#dialogCloseRadio: EditorCloseRadio = createRadio()
@@ -26,7 +26,7 @@ export class AutoI18NEditor {
 
 	#onDestroy = noop
 
-	constructor(i18n: AutoI18N, { autoload = false } = {}) {
+	constructor(i18n: SvelteI18N, { autoload = false } = {}) {
 		this.i18n = i18n
 
 		const off = on(
@@ -67,7 +67,7 @@ export class AutoI18NEditor {
 		category: string,
 		key: string,
 		values: NonNullable<TOptions["values"]>,
-		{ multiline = false }: AutoI18NEditorConfig = {},
+		{ multiline = false }: SvelteI18NEditorConfig = {},
 	) {
 		return html`<div
 			class="i18n-fragment"

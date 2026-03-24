@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from "svelte"
-	import type { AutoI18N } from "./index.js"
+	import type { SvelteI18N } from "./index.js"
 
 	interface Props {
 		autoload?: boolean
@@ -10,7 +10,7 @@
 
 	let { search = $bindable(), autoload = false, onKeyClick }: Props = $props()
 
-	let i18n = getContext<AutoI18N>("i18n")
+	let i18n = getContext<SvelteI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
 	function processKeysInUse(keysInUse: IteratorObject<[string, string]>, search: string) {
@@ -27,10 +27,10 @@
 
 <div>
 	<h2 class="i18n-editor-title">
-		{t("auto-i18n", "all_title", { overrideMissing: "All keys" })}
+		{t("svelte-i18n", "all_title", { overrideMissing: "All keys" })}
 	</h2>
 	<label for="i18n-editor-search">
-		{t("auto-i18n", "search", { overrideMissing: "Search:" })}
+		{t("svelte-i18n", "search", { overrideMissing: "Search:" })}
 		<input id="i18n-editor-search" bind:value={search} />
 	</label>
 	<ul id="i18n-editor-all-keys">

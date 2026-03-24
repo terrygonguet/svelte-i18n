@@ -1,6 +1,6 @@
 {
-	"name": "@terrygonguet/auto-i18n",
-	"version": "0.0.7",
+	"name": "@terrygonguet/svelte-i18n",
+	"version": "0.1.0",
 	"license": "MIT",
 	"scripts": {
 		"dev": "vite dev",
@@ -84,9 +84,9 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/terrygonguet/auto-i18n.git"
+		"url": "git+https://github.com/terrygonguet/svelte-i18n.git"
 	},
 	"bugs": {
-		"url": "https://github.com/terrygonguet/auto-i18n/issues"
+		"url": "https://github.com/terrygonguet/svelte-i18n/issues"
 	}
 }

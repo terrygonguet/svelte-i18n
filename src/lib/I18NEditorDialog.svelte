@@ -31,11 +31,11 @@
 	import { safe } from "@terrygonguet/utils/result"
 	import { getContext, tick, untrack } from "svelte"
 	import type { Radio } from "./radio.js"
-	import { type TOptions, type AutoI18N } from "./index.js"
+	import { type TOptions, type SvelteI18N } from "./index.js"
 
 	let { autoload = false, open, close, onChange }: Props = $props()
 
-	let i18n = getContext<AutoI18N>("i18n")
+	let i18n = getContext<SvelteI18N>("i18n")
 	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
 	type Mode =
@@ -130,7 +130,7 @@
 		else if (
 			response &&
 			typeof response == "object" &&
-			response.message == "auto-i18n.update_success"
+			response.message == "svelte-i18n.update_success"
 		) {
 			i18n.loadAll().then(() => onChange?.())
 			dialogEl.close()

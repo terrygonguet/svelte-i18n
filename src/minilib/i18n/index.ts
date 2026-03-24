@@ -1,12 +1,12 @@
 import { env } from "$env/dynamic/private"
 import { db, schema } from "$minilib/db/index.js"
 import {
-	createAutoI18NHandle,
-	type CreateAutoI18NHandlerOptions,
-} from "@terrygonguet/auto-i18n/server"
+	createSvelteI18NHandle,
+	type CreateSvelteI18NHandlerOptions,
+} from "@terrygonguet/svelte-i18n/server"
 import { and, eq, inArray, sql } from "drizzle-orm"
 
-const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({
+const fetchCategory: CreateSvelteI18NHandlerOptions["fetchCategory"] = async ({
 	where: { lang, category },
 }) => {
 	console.log("fetchCategory", { lang, category })
@@ -25,7 +25,7 @@ const fetchCategory: CreateAutoI18NHandlerOptions["fetchCategory"] = async ({
 		)
 }
 
-const fetchAll: CreateAutoI18NHandlerOptions["fetchAll"] = async ({
+const fetchAll: CreateSvelteI18NHandlerOptions["fetchAll"] = async ({
 	where: { langs, categories },
 }) => {
 	console.log("fetchAll", { langs, categories })
@@ -57,7 +57,7 @@ const fetchAll: CreateAutoI18NHandlerOptions["fetchAll"] = async ({
 	return obj
 }
 
-const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, langs }) => {
+const update: CreateSvelteI18NHandlerOptions["update"] = async ({ category, key, langs }) => {
 	console.log("update", { category, key, langs })
 	const insertValues: (typeof schema.translations.$inferInsert)[] = []
 	for (const [lang, value] of Object.entries(langs)) {
@@ -83,7 +83,7 @@ const update: CreateAutoI18NHandlerOptions["update"] = async ({ category, key, l
 		.run()
 }
 
-export const i18nHandle = createAutoI18NHandle({
+export const i18nHandle = createSvelteI18NHandle({
 	supportedLangs: env.SUPPORTED_LANGS.split(","),
 	fallbackLang: env.FALLBACK_LANG,
 	fetchCategory,
