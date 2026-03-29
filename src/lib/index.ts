@@ -1,14 +1,17 @@
 import { safe } from "@terrygonguet/utils/result"
+import { safeParse } from "@terrygonguet/utils/json"
+import { navigating, page } from "$app/stores"
 import { createSubscriber } from "svelte/reactivity"
 import type { SvelteI18NEditor, SvelteI18NEditorConfig } from "./editor.svelte"
+import type { Translations } from "./server.js"
+import { browser } from "$app/environment"
 
 export interface SvelteI18NConstructorOptions {
 	lang: string | (() => string)
 	supportedLangs: string[] | (() => string[])
 	fallbackLang: string | (() => string)
-	preload?: string[]
-	fetch?: typeof fetch
 	mode?: SvelteI18N["mode"]
+	fetch?: typeof fetch
 }
 
 export interface TOptions {
@@ -27,7 +30,7 @@ export type TValue =
 
 export class SvelteI18N<T extends { [category: string]: string } = Record<string, string>> {
 	fetch: typeof fetch
-	mode: "normal" | "ssr"
+	mode: "ssr" | "browser"
 
 	#editor?: SvelteI18NEditor
 	#editorSubscibe: ReturnType<typeof createSubscriber>
@@ -66,6 +69,11 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		return this.#loadedCategories.values()
 	}
 
+	#categoriesInUse = new Set<string>()
+	get categoriesInUse(): IteratorObject<string> {
+		return this.#categoriesInUse.values()
+	}
+
 	#keysInUse = new Set<string>()
 	get keysInUse(): IteratorObject<[category: string, key: string]> {
 		return this.#keysInUse.values().map((encoded) => JSON.parse(encoded))
@@ -75,14 +83,13 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		lang,
 		supportedLangs,
 		fallbackLang,
-		preload,
+		mode = "browser",
 		fetch = globalThis.fetch,
-		//! HACK by default we always start in "ssr" mode to not break hydration
-		mode = "ssr",
 	}: SvelteI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
+		this.mode = mode
 
 		if (!this.#supportedLangs.includes(this.#lang)) {
 			console.warn(
@@ -116,9 +123,32 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 			this.#langChange = update
 		})
 
-		this.mode = mode
+		if (this.mode == "ssr" && browser) this.#hydrate()
+	}
 
-		if (preload) this.loadAll({ categories: preload, langs: [this.#lang, this.#fallbackLang] })
+	#hydrate() {
+		if (!globalThis.document) return
+
+		const script = document.querySelector(`script[type="application/json"]#svelte-i18n-data`)
+		if (!script) return
+
+		const seedData = safeParse<Translations>(script.innerHTML, {})
+		for (const [lang, categories] of Object.entries(seedData)) {
+			for (const [category, pairs] of Object.entries(categories)) {
+				const cacheKey = lang + "." + category
+				this.#loadedCategories.add(category)
+				this.#cache.set(cacheKey, pairs)
+			}
+		}
+
+		//! HACK the only way I found to get out of "hydrate" mode is to wait for the $page store to contain a valid value
+		const off = page.subscribe(($page) => {
+			if ($page.url) {
+				this.mode = "browser"
+				this.#cacheChange()
+				off()
+			}
+		})
 	}
 
 	async load(category: Extract<keyof T, string>, { lang = this.#lang, skipIfCached = false } = {}) {
@@ -147,9 +177,6 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		} else {
 			this.#loadedCategories.add(category)
 			this.#cache.set(cacheKey, data)
-
-			//! switch to "normal" mode after first render to not break hydration
-			this.mode = "normal"
 		}
 		this.#cacheChange()
 	}
@@ -206,19 +233,17 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 			values = {},
 		} = options
 
-		//! HACK geez I sure wish I had a record or a tuple...
-		if (category != "svelte-i18n") this.#keysInUse.add(JSON.stringify([category, key]))
+		if (category != "svelte-i18n") {
+			this.#categoriesInUse.add(category)
+			//! HACK geez I sure wish I had a record or a tuple...
+			this.#keysInUse.add(JSON.stringify([category, key]))
+		}
 
 		this.#cacheSubscribe()
 		this.#langSubscribe()
 		this.#editorSubscibe()
-		const cacheKey = lang + "." + category
-
-		const translations = this.#cache.get(cacheKey)
-		if (!translations && autoload) this.load(category, { lang })
-
-		if (this.mode == "ssr") {
-			// In SSR we start the load and return a value to be replaced before sending HTML to client
+		if (this.mode != "browser") {
+			// when not in browser we insert placeholders to replace later
 			return (
 				"%svelte-i18n.t(" +
 				JSON.stringify([lang, category, key, options]).replaceAll(
@@ -228,6 +253,10 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 				")%"
 			)
 		}
+
+		const cacheKey = lang + "." + category
+		const translations = this.#cache.get(cacheKey)
+		if (!translations && autoload) this.load(category, { lang })
 
 		let text = translations?.[key]
 		if (text == undefined) {

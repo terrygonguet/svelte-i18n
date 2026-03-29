@@ -24,12 +24,12 @@
 </script>
 
 <script lang="ts">
+	import { safe } from "@terrygonguet/utils/result"
+	import { getContext, tick, untrack } from "svelte"
 	import I18NEditorContent from "./I18NEditorContent.svelte"
 	import I18NEditorOnSign from "./I18NEditorOnSign.svelte"
 	import I18NEditorSeeAll from "./I18NEditorSeeAll.svelte"
 	import I18NEditorTranslation from "./I18NEditorTranslation.svelte"
-	import { safe } from "@terrygonguet/utils/result"
-	import { getContext, tick, untrack } from "svelte"
 	import type { Radio } from "./radio.js"
 	import { type TOptions, type SvelteI18N } from "./index.js"
 

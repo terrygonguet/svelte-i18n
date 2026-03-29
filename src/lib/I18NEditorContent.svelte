@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { getContext } from "svelte"
-	import type { SvelteI18N } from "@terrygonguet/svelte-i18n"
+	import type { SvelteI18N } from "./index.js"
 
 	interface Props {
 		autoload?: boolean
