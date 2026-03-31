@@ -1,17 +1,15 @@
 import { safe } from "@terrygonguet/utils/result"
 import { safeParse } from "@terrygonguet/utils/json"
-import { page } from "$app/stores"
 import { createSubscriber } from "svelte/reactivity"
 import type { SvelteI18NEditor, SvelteI18NEditorConfig } from "./editor.svelte"
 import type { Translations } from "./server.js"
-import { browser } from "$app/environment"
 
 export interface SvelteI18NConstructorOptions {
 	lang: string | (() => string)
 	supportedLangs: string[] | (() => string[])
 	fallbackLang: string | (() => string)
-	mode?: SvelteI18N["mode"]
 	fetch?: typeof fetch
+	id?: Symbol
 }
 
 export interface TOptions {
@@ -28,9 +26,88 @@ export type TValue =
 	| boolean
 	| { prefix?: string; visible: string | number | boolean; suffix?: string }
 
-export class SvelteI18N<T extends { [category: string]: string } = Record<string, string>> {
+export class SvelteI18N<T extends { [category: string]: string } = any> {
+	//#region static
+
+	// cache is shared across all instances
+	static #cache = new Map<string, Record<string, string>>()
+	static #cacheSubscribe = createSubscriber((update) => (SvelteI18N.#cacheChange = update))
+	static #cacheChange = () => {}
+	static get isCacheEmpty() {
+		return SvelteI18N.#cache.size == 0
+	}
+
+	static #failedCategories = new Set<string>()
+	static #inFlight = new Set<string>()
+
+	//! each instance must be accessible from static for to inline data after SSR
+	static instances = new WeakMap<Symbol, SvelteI18N>()
+
+	static async load(
+		lang: string,
+		category: string,
+		{ fetch = globalThis.fetch, skipIfCached = false } = {},
+	) {
+		const cacheKey = lang + "." + category
+		if (
+			SvelteI18N.#failedCategories.has(cacheKey) ||
+			SvelteI18N.#inFlight.has(cacheKey) ||
+			SvelteI18N.#inFlight.has("all") ||
+			(skipIfCached && SvelteI18N.#cache.has(cacheKey))
+		)
+			return
+
+		SvelteI18N.#inFlight.add(cacheKey)
+		const [err, data] = await safe(() => fetch(`/locale/${lang}/${category}.json`))
+			.andThen(async (res) => ({ ok: res.ok, data: await res.json() }))
+			.andThen(({ ok, data }) => {
+				if (!ok) throw new Error(data.message)
+				else return data
+			})
+			.asTuple()
+		SvelteI18N.#inFlight.delete(cacheKey)
+
+		if (err) {
+			console.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
+			SvelteI18N.#failedCategories.add(cacheKey)
+		} else {
+			SvelteI18N.#cache.set(cacheKey, data)
+		}
+		SvelteI18N.#cacheChange()
+	}
+
+	static async loadAll({
+		categories,
+		langs,
+		fetch = globalThis.fetch,
+	}: { categories?: string[]; langs?: string[]; fetch?: typeof globalThis.fetch } = {}) {
+		const search = new URLSearchParams()
+		if (categories?.length) search.set("categories", categories.join(","))
+		if (langs?.length) search.set("langs", langs.join(","))
+
+		SvelteI18N.#inFlight.add("all")
+		const url = "/locale/all.json" + (search.size ? "?" + search : "")
+		const [err, data] = await safe(() => fetch(url))
+			.andThen((res) => res.json())
+			.asTuple()
+		SvelteI18N.#inFlight.delete("all")
+		if (err)
+			console.error("[svelte-i18n] Failed to load all translations", { categories, langs }, err)
+
+		for (const [lang, categories] of Object.entries<any>(data)) {
+			for (const [category, keys] of Object.entries<any>(categories)) {
+				const cacheKey = lang + "." + category
+				SvelteI18N.#cache.set(cacheKey, keys)
+			}
+		}
+
+		SvelteI18N.#cacheChange()
+	}
+
+	//#endregion
+
+	id: Symbol
 	fetch: typeof fetch
-	mode: "ssr" | "browser"
 
 	#editor?: SvelteI18NEditor
 	#editorSubscibe: ReturnType<typeof createSubscriber>
@@ -48,10 +125,6 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		return this.#lang
 	}
 
-	#cache = new Map<string, Record<string, string>>()
-	#cacheSubscribe: ReturnType<typeof createSubscriber>
-	#cacheChange = () => {}
-
 	#supportedLangs: string[]
 	get supportedLangs() {
 		return this.#supportedLangs
@@ -62,17 +135,19 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		return this.#fallbackLang
 	}
 
-	#loadedCategories = new Set<string>()
-	#failedCategories = new Set<string>()
-	#inFlight = new Set<string>()
-	get loadedCategories() {
-		return this.#loadedCategories.values()
+	#categoriesInUse = new Set<Extract<keyof T, string>>()
+	get categoriesInUse() {
+		return this.#categoriesInUse
 	}
-
-	#categoriesInUse = new Set<string>()
-	get categoriesInUse(): IteratorObject<string> {
-		return this.#categoriesInUse.values()
-	}
+	// get categoriesInUse() {
+	// 	const set = SvelteI18N.#categoriesInUse.get(this.fetch)
+	// 	if (set) return set as Set<Extract<keyof T, string>>
+	// 	else {
+	// 		const set = new Set<string>()
+	// 		SvelteI18N.#categoriesInUse.set(this.fetch, set)
+	// 		return set as Set<Extract<keyof T, string>>
+	// 	}
+	// }
 
 	#keysInUse = new Set<string>()
 	get keysInUse(): IteratorObject<[category: string, key: string]> {
@@ -83,13 +158,12 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		lang,
 		supportedLangs,
 		fallbackLang,
-		mode = "browser",
+		id = Symbol("svelte-i18n:id"),
 		fetch = globalThis.fetch,
 	}: SvelteI18NConstructorOptions) {
 		this.#lang = typeof lang == "string" ? lang : lang()
 		this.#supportedLangs = Array.isArray(supportedLangs) ? supportedLangs : supportedLangs()
 		this.#fallbackLang = typeof fallbackLang == "string" ? fallbackLang : fallbackLang()
-		this.mode = mode
 
 		if (!this.#supportedLangs.includes(this.#lang)) {
 			console.warn(
@@ -112,18 +186,13 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 				},
 			)
 
+		this.id = id
 		this.fetch = fetch
-		this.#editorSubscibe = createSubscriber((update) => {
-			this.#editorChange = update
-		})
-		this.#cacheSubscribe = createSubscriber((update) => {
-			this.#cacheChange = update
-		})
-		this.#langSubscribe = createSubscriber((update) => {
-			this.#langChange = update
-		})
+		this.#editorSubscibe = createSubscriber((update) => (this.#editorChange = update))
+		this.#langSubscribe = createSubscriber((update) => (this.#langChange = update))
 
-		if (this.mode == "ssr" && browser) this.#hydrate()
+		SvelteI18N.instances.set(id, this)
+		this.#hydrate()
 	}
 
 	#hydrate() {
@@ -136,81 +205,27 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		for (const [lang, categories] of Object.entries(seedData)) {
 			for (const [category, pairs] of Object.entries(categories)) {
 				const cacheKey = lang + "." + category
-				this.#loadedCategories.add(category)
-				this.#cache.set(cacheKey, pairs)
+				SvelteI18N.#cache.set(cacheKey, pairs)
 			}
 		}
-
-		//! HACK the only way I found to get out of "hydrate" mode is to wait for the $page store to contain a valid value
-		const off = page.subscribe(($page) => {
-			if ($page.url) {
-				this.mode = "browser"
-				this.#cacheChange()
-				off()
-			}
-		})
 	}
 
-	async load(category: Extract<keyof T, string>, { lang = this.#lang, skipIfCached = false } = {}) {
-		const cacheKey = lang + "." + category
-		if (
-			this.#failedCategories.has(cacheKey) ||
-			this.#inFlight.has(cacheKey) ||
-			this.#inFlight.has("all") ||
-			(skipIfCached && this.#cache.has(cacheKey))
-		)
-			return
-
-		this.#inFlight.add(cacheKey)
-		const [err, data] = await safe(() => this.fetch(`/locale/${lang}/${category}.json`))
-			.andThen(async (res) => ({ ok: res.ok, data: await res.json() }))
-			.andThen(({ ok, data }) => {
-				if (!ok) throw new Error(data.message)
-				else return data
-			})
-			.asTuple()
-		this.#inFlight.delete(cacheKey)
-
-		if (err) {
-			console.error("[svelte-i18n] Failed to load translations", { category, lang }, err)
-			this.#failedCategories.add(cacheKey)
-		} else {
-			this.#loadedCategories.add(category)
-			this.#cache.set(cacheKey, data)
-		}
-		this.#cacheChange()
+	load(category: Extract<keyof T, string>, { lang = this.#lang, skipIfCached = false } = {}) {
+		return SvelteI18N.load(lang, category, { fetch: this.fetch, skipIfCached })
 	}
 
-	async loadAll({ categories, langs }: { categories?: (keyof T)[]; langs?: string[] } = {}) {
-		const search = new URLSearchParams()
-		if (categories?.length) search.set("categories", categories.join(","))
-		if (langs?.length) search.set("langs", langs.join(","))
-
-		this.#inFlight.add("all")
-		const url = "/locale/all.json" + (search.size ? "?" + search : "")
-		const [err, data] = await safe(() => this.fetch(url))
-			.andThen((res) => res.json())
-			.asTuple()
-		this.#inFlight.delete("all")
-		if (err)
-			console.error("[svelte-i18n] Failed to load all translations", { categories, langs }, err)
-
-		for (const [lang, categories] of Object.entries<any>(data)) {
-			for (const [category, keys] of Object.entries<any>(categories)) {
-				const cacheKey = lang + "." + category
-				this.#cache.set(cacheKey, keys)
-				this.#loadedCategories.add(category)
-			}
-		}
-
-		this.#cacheChange()
+	loadAll({
+		categories,
+		langs,
+	}: { categories?: Extract<keyof T, string>[]; langs?: string[] } = {}) {
+		return SvelteI18N.loadAll({ categories, langs, fetch: this.fetch })
 	}
 
 	async setLang(lang: string) {
 		if (this.#lang == lang) return
-		const toLoad: string[] = []
-		for (const category of this.#loadedCategories) {
-			if (!this.#cache.has(lang + "." + category)) toLoad.push(category)
+		const toLoad: Extract<keyof T, string>[] = []
+		for (const category of this.categoriesInUse) {
+			if (!SvelteI18N.#cache.has(lang + "." + category)) toLoad.push(category)
 		}
 		this.#lang = lang
 		if (toLoad.length > 0) await this.loadAll({ categories: toLoad, langs: [lang] })
@@ -234,34 +249,23 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		} = options
 
 		if (category != "svelte-i18n") {
-			this.#categoriesInUse.add(category)
+			this.categoriesInUse.add(category)
 			//! HACK geez I sure wish I had a record or a tuple...
 			this.#keysInUse.add(JSON.stringify([category, key]))
 		}
 
-		this.#cacheSubscribe()
+		SvelteI18N.#cacheSubscribe()
 		this.#langSubscribe()
 		this.#editorSubscibe()
-		if (this.mode != "browser") {
-			// when not in browser we insert placeholders to replace later
-			return (
-				"%svelte-i18n.t(" +
-				JSON.stringify([lang, category, key, options]).replaceAll(
-					")%",
-					"__svelte-i18n__sentinel__",
-				) +
-				")%"
-			)
-		}
 
 		const cacheKey = lang + "." + category
-		const translations = this.#cache.get(cacheKey)
+		const translations = SvelteI18N.#cache.get(cacheKey)
 		if (!translations && autoload) this.load(category, { lang })
 
 		let text = translations?.[key]
 		if (text == undefined) {
 			// 1. wait for the content to load
-			if (this.#inFlight.has(cacheKey)) text = ""
+			if (SvelteI18N.#inFlight.has(cacheKey)) text = ""
 			// 2. try fallback lang
 			else if (lang != this.#fallbackLang)
 				text = this.t(category, key, { ...options, lang: this.#fallbackLang })
@@ -285,8 +289,8 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		key: Key,
 		{ lang = this.#lang, autoload = false }: Pick<TOptions, "lang" | "autoload"> = {},
 	) {
-		this.#cacheSubscribe()
-		const text = this.#cache.get(lang + "." + category)?.[key]
+		SvelteI18N.#cacheSubscribe()
+		const text = SvelteI18N.#cache.get(lang + "." + category)?.[key]
 		if (text == undefined && autoload) this.load(category, { lang })
 		return text
 	}
@@ -295,11 +299,11 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		category: Extract<keyof T, string>,
 		{ lang = this.#lang, autoload = false, includeFallback = false } = {},
 	) {
-		this.#cacheSubscribe()
-		const cached = this.#cache.get(lang + "." + category)
+		SvelteI18N.#cacheSubscribe()
+		const cached = SvelteI18N.#cache.get(lang + "." + category)
 		if (!cached && autoload) this.load(category, { lang })
 		if (includeFallback) {
-			const cachedFallback = this.#cache.get(this.#fallbackLang + "." + category)
+			const cachedFallback = SvelteI18N.#cache.get(this.#fallbackLang + "." + category)
 			if (!cachedFallback && autoload) this.load(category, { lang: this.#fallbackLang })
 			return { ...(cachedFallback ?? {}), ...(cached ?? {}) }
 		} else return cached ?? {}
@@ -416,6 +420,7 @@ export class SvelteI18N<T extends { [category: string]: string } = Record<string
 		return (category, key, opts = {}) => this.t(category, key, { ...defaultOpts, ...opts })
 	}
 
+	// TODO maybe make editor handling static too?
 	async showEditor({ autoload = false } = {}) {
 		if (!this.#editor) {
 			const { SvelteI18NEditor } = await import("./editor.svelte")
