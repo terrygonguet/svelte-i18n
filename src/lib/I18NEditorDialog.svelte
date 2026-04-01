@@ -36,7 +36,6 @@
 	let { autoload = false, open, close, onChange }: Props = $props()
 
 	let i18n = getContext<SvelteI18N>("i18n")
-	let t = $derived(i18n.withDefaults({ editor: false, autoload }))
 
 	type Mode =
 		| {

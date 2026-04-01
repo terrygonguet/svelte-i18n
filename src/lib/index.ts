@@ -80,7 +80,11 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		categories,
 		langs,
 		fetch = globalThis.fetch,
-	}: { categories?: string[]; langs?: string[]; fetch?: typeof globalThis.fetch } = {}) {
+	}: {
+		categories?: string[]
+		langs?: string[]
+		fetch?: typeof globalThis.fetch
+	} = {}) {
 		const search = new URLSearchParams()
 		if (categories?.length) search.set("categories", categories.join(","))
 		if (langs?.length) search.set("langs", langs.join(","))
@@ -334,12 +338,12 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 				const { category, key, lang = this.#lang } = match.groups!
 				value = this.t<any, any>(category, key, { ...options, editor: false, values, lang })
 			} else if ((match = SvelteI18N.#regex_$match.exec(expr))) {
-				const { varname, patterns } = match.groups!
+				const { varname = "", patterns = "" } = match.groups!
 				const matches = Array.from(patterns.matchAll(/(?<amount>[\w_]):/g))
 				const rules: { [amount: string]: string } = {}
 				for (let i = 0; i < matches.length; i++) {
-					const { 0: match, groups, index } = matches[i]
-					const { amount } = groups!
+					const { 0: match, groups, index = 0 } = matches[i]!
+					const { amount = "_" } = groups!
 					const start = index + match.length
 					const end = matches[i + 1]?.index
 					const rule = patterns.slice(start, end)
@@ -354,8 +358,9 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 						values,
 					})
 				} else {
-					if (typeof tvalue == "object") matchResult = rules[tvalue.visible.toString()] ?? rules._
-					else matchResult = rules[tvalue.toString()] ?? rules._
+					if (typeof tvalue == "object")
+						matchResult = rules[tvalue.visible.toString()] ?? rules["_"]
+					else matchResult = rules[tvalue.toString()] ?? rules["_"]
 
 					if (matchResult == undefined) {
 						console.warn("[svelte-i18n] Tried to interpolate a $match without a default case", {
@@ -370,7 +375,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 					else value = matchResult
 				}
 			} else if ((match = SvelteI18N.#regex_base.exec(expr))) {
-				const { varname } = match.groups!
+				const { varname = "" } = match.groups!
 				const tvalue = values[varname]
 				if (typeof tvalue == "object")
 					value = (tvalue.prefix ?? "") + tvalue.visible + (tvalue.suffix ?? "")
@@ -381,7 +386,7 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 						values,
 					})
 			} else if ((match = SvelteI18N.#regex_$if.exec(expr))) {
-				const { varname, true: ifTrue, false: ifFalse = "" } = match.groups!
+				const { varname = "", true: ifTrue = "", false: ifFalse = "" } = match.groups!
 				const tvalue = values[varname]
 				if (typeof tvalue == "object")
 					value =

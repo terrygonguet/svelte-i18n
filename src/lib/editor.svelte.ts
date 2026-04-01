@@ -11,8 +11,6 @@ import { safeParse } from "@terrygonguet/utils/json"
 
 export { I18NEditorDialog }
 
-const html = String.raw
-
 export interface SvelteI18NEditorConfig {
 	multiline?: boolean
 }
@@ -69,7 +67,7 @@ export class SvelteI18NEditor {
 		values: NonNullable<TOptions["values"]>,
 		{ multiline = false }: SvelteI18NEditorConfig = {},
 	) {
-		return html`<div
+		return /* html */ `<div
 			class="i18n-fragment"
 			data-i18n-type="translation"
 			data-i18n-category="${category}"
@@ -82,7 +80,7 @@ export class SvelteI18NEditor {
 	}
 
 	renderContent(content: string, { url }: { url?: string }) {
-		return html`<div
+		return /* html */ `<div
 			class="i18n-fragment"
 			data-i18n-type="content"
 			${url ? 'data-i18n-url="' + url + '"' : ""}
@@ -94,10 +92,10 @@ export class SvelteI18NEditor {
 	showDialog(anchorEl: HTMLElement) {
 		const {
 			i18nType: type,
-			i18nCategory: category,
-			i18nKey: key,
-			i18nValues,
-			i18nUrl: url,
+			i18nCategory: category = "",
+			i18nKey: key = "",
+			i18nValues = "{}",
+			i18nUrl: url = "",
 			i18nMultiline,
 		} = anchorEl.dataset as Record<string, string>
 		switch (type) {
