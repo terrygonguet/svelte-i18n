@@ -1,6 +1,5 @@
 import { json, type Handle, type RequestEvent } from "@sveltejs/kit"
 import { safe } from "@terrygonguet/utils/result"
-import { SvelteI18N } from "./index.js"
 
 type MaybePromise<T> = T | Promise<T>
 
@@ -49,7 +48,6 @@ export interface SvelteI18NServerBundle {
 		lang: string
 		fallbackLang: string
 		supportedLangs: string[]
-		id: Symbol
 	}
 }
 
@@ -68,19 +66,18 @@ export function createSvelteI18NServerBundle({
 
 	//! HACK: stringified `where` is the key and the full response object is the value
 	const cache = new Map<string, any>()
-	const ssrLangs = new WeakMap<Request, { lang: string; id: Symbol }>()
+	const ssrLangs = new WeakMap<Request, string>()
 	return {
 		setSSRLang(request, lang) {
-			const id = Symbol()
-			ssrLangs.set(request, { lang, id })
-			return { lang, fallbackLang, supportedLangs, id }
+			ssrLangs.set(request, lang)
+			return { lang, fallbackLang, supportedLangs }
 		},
 		async handle({ event, resolve }) {
 			switch (event.request.method) {
 				case "GET": {
 					const match = categoryRegEx.exec(event.url.pathname)
 					if (match) {
-						const { lang, category } = match.groups!
+						const { lang = "", category = "" } = match.groups!
 						if (canFetchCategory ? !canFetchCategory({ where: { lang, category }, event }) : false)
 							return json({ message: "svelte-i18n.error_access_denied" }, { status: 403 })
 
@@ -121,6 +118,8 @@ export function createSvelteI18NServerBundle({
 							return json(data, { status: 200 })
 						}
 					}
+
+					break
 				}
 
 				case "POST": {
@@ -139,7 +138,7 @@ export function createSvelteI18NServerBundle({
 						if (typeof langs != "object" || !langs)
 							return json({ message: "svelte-i18n.error_missing_langs" }, { status: 400 })
 
-						for (const [lang, value] of Object.entries(langs)) {
+						for (const value of Object.values(langs)) {
 							if (typeof value != "string")
 								return json({ message: "svelte-i18n.error_bad_langs" }, { status: 400 })
 						}
@@ -157,26 +156,15 @@ export function createSvelteI18NServerBundle({
 							return json({ message: "svelte-i18n.update_success" }, { status: 200 })
 						}
 					}
+
+					break
 				}
 			}
 
-			if (SvelteI18N.isCacheEmpty) await SvelteI18N.loadAll({ fetch: event.fetch })
 			return resolve(event, {
 				transformPageChunk({ html }) {
-					const { lang = fallbackLang, id = Symbol() } = ssrLangs.get(event.request) ?? {}
-					const i18n = SvelteI18N.instances.get(id)
-					if (!i18n) return html.replaceAll("%svelte-i18n.lang%", lang)
-					else {
-						return html
-							.replaceAll("%svelte-i18n.lang%", lang)
-							.replaceAll(/<\/div>\s*<\/body>/g, (match) => {
-								const seedData: TranslationLanguage = {}
-								for (const category of i18n.categoriesInUse) {
-									seedData[category] = i18n.rawCategory(category)
-								}
-								return `<script id="svelte-i18n-data" type="application/json">${JSON.stringify({ [i18n.lang]: seedData })}</script>${match}`
-							})
-					}
+					const lang = ssrLangs.get(event.request) ?? fallbackLang
+					return html.replaceAll("%svelte-i18n.lang%", lang)
 				},
 			})
 		},

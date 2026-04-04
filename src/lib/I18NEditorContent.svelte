@@ -15,14 +15,14 @@
 
 <div id="i18n-editor-content">
 	<p>
-		{t("svelte-i18n", "external_content", {
+		{await t("svelte-i18n", "external_content", {
 			overrideMissing: "This text is external content not managed by Svelte-i18n.",
 		})}
 	</p>
 	{#if url}
 		<p id="i18n-editor-content-url">
 			<a href={url} target="_blank">
-				{t("svelte-i18n", "content_url", { overrideMissing: "View content" })}
+				{await t("svelte-i18n", "content_url", { overrideMissing: "View content" })}
 			</a>
 		</p>
 	{/if}

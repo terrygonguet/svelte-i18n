@@ -27,10 +27,10 @@
 
 <div>
 	<h2 class="i18n-editor-title">
-		{t("svelte-i18n", "all_title", { overrideMissing: "All keys" })}
+		{@html t("svelte-i18n", "all_title", { overrideMissing: "All keys" })}
 	</h2>
 	<label for="i18n-editor-search">
-		{t("svelte-i18n", "search", { overrideMissing: "Search:" })}
+		{await t("svelte-i18n", "search", { overrideMissing: "Search:" })}
 		<input id="i18n-editor-search" bind:value={search} />
 	</label>
 	<ul id="i18n-editor-all-keys">
@@ -38,7 +38,7 @@
 			<li>
 				<button onclick={() => onKeyClick(category, key)}>
 					<code>{category}.{key}</code>
-					<span>{i18n.raw(category, key)}</span>
+					<span>{await i18n.raw(category, key, { autoload })}</span>
 				</button>
 			</li>
 		{/each}

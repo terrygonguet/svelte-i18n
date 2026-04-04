@@ -22,10 +22,10 @@
 <div id="i18n-editor-on-sign">
 	<aside data-side={seeAllSide}>
 		<button id="i18n-editor-see-all" onclick={() => onSeeAll()}>
-			{t("svelte-i18n", "see_all", { overrideMissing: "See all" })}
+			{await t("svelte-i18n", "see_all", { overrideMissing: "See all" })}
 		</button>
 		<button
-			aria-label={t("svelte-i18n", "see_all_switch", { overrideMissing: "Switch side" })}
+			aria-label={await t("svelte-i18n", "see_all_switch", { overrideMissing: "Switch side" })}
 			onclick={onSeeAllSwitchClick}
 		>
 			<!-- Icon from https://icons.mono.company -->
