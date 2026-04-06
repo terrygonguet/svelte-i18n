@@ -27,7 +27,7 @@
 
 <div>
 	<h2 class="i18n-editor-title">
-		{@html t("svelte-i18n", "all_title", { overrideMissing: "All keys" })}
+		{@html await t("svelte-i18n", "all_title", { overrideMissing: "All keys" })}
 	</h2>
 	<label for="i18n-editor-search">
 		{await t("svelte-i18n", "search", { overrideMissing: "Search:" })}
