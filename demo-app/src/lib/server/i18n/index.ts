@@ -7,10 +7,9 @@ import { and, eq, inArray, sql } from "drizzle-orm"
 const { handle, fetchAll, fetchCategory, updateKey } = createSvelteI18NServerBundle({
 	async fetchData({ where: { langs, categories } }) {
 		console.log("fetchData", { langs, categories })
-		const langsWhere = langs?.length ? inArray(schema.translations.lang, langs) : undefined
-		const categoriesWhere = categories?.length
-			? inArray(schema.translations.category, categories)
-			: undefined
+		const langsWhere = langs == "all" ? undefined : inArray(schema.translations.lang, langs)
+		const categoriesWhere =
+			categories == "all" ? undefined : inArray(schema.translations.category, categories)
 		const where =
 			categoriesWhere && langsWhere
 				? and(categoriesWhere, langsWhere)

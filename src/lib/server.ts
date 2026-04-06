@@ -18,7 +18,7 @@ export type Translations = { [lang: string]: TranslationLanguage }
 export interface CreateSvelteI18NServerBundleOptions {
 	getLang?(event: RequestEvent): MaybePromise<string>
 	fetchData(options: {
-		where: { langs?: string[]; categories?: string[] }
+		where: { langs: "all" | string[]; categories: "all" | string[] }
 		event: RequestEvent
 	}): MaybePromise<Translations | undefined>
 	updateData?(
@@ -29,7 +29,10 @@ export interface CreateSvelteI18NServerBundleOptions {
 
 export interface SvelteI18NServerBundle {
 	fetchCategory: RemoteQueryFunction<{ lang: string; category: string }, TranslationCategory>
-	fetchAll: RemoteQueryFunction<{ langs?: string[]; categories?: string[] }, Translations>
+	fetchAll: RemoteQueryFunction<
+		{ langs: "all" | string[]; categories: "all" | string[] },
+		Translations
+	>
 	updateKey: RemoteCommand<
 		{ category: string; key: string; langs: { [lang: string]: string } },
 		Promise<Translations>
@@ -129,8 +132,8 @@ const fetchCategoryValidator: StandardSchemaV1<{
 }
 
 const fetchAllValidator: StandardSchemaV1<{
-	langs?: string[]
-	categories?: string[]
+	langs: "all" | string[]
+	categories: "all" | string[]
 }> = {
 	"~standard": {
 		version: 1,
@@ -141,7 +144,11 @@ const fetchAllValidator: StandardSchemaV1<{
 
 			const issues: StandardSchemaV1.Issue[] = []
 			const { categories, langs } = value as Record<string, unknown>
-			if (langs !== undefined) {
+
+			if (typeof langs == "string") {
+				if (langs != "all")
+					issues.push({ message: "svelte-i18n.error_langs_invalid", path: ["langs"] })
+			} else {
 				if (typeof langs != "object" || !Array.isArray(langs))
 					issues.push({ message: "svelte-i18n.error_langs_not_array", path: ["langs"] })
 				else {
@@ -152,8 +159,11 @@ const fetchAllValidator: StandardSchemaV1<{
 				}
 			}
 
-			if (categories !== undefined) {
-				if (typeof categories != "object" || !Array.isArray(categories))
+			if (typeof categories == "string") {
+				if (categories != "all")
+					issues.push({ message: "svelte-i18n.error_categories_invalid", path: ["categories"] })
+			} else {
+				if (typeof langs != "object" || !Array.isArray(categories))
 					issues.push({ message: "svelte-i18n.error_categories_not_array", path: ["categories"] })
 				else {
 					for (const [i, lang] of categories.entries()) {

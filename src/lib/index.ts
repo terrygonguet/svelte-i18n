@@ -134,10 +134,12 @@ export class SvelteI18N<T extends { [category: string]: string } = any> {
 		}
 	}
 
-	async loadAll({ langs }: { langs?: string[] } = {}) {
+	async loadAll({ langs = "all" }: { langs?: "all" | string[] } = {}) {
 		if (!this.#fetchAll) throw new Error("svelte-i18n.error_fetchAll_unavailable")
 
-		const [err, data] = await safe(async () => this.#fetchAll!({ langs })).asTuple()
+		const [err, data] = await safe(async () =>
+			this.#fetchAll!({ langs, categories: "all" }),
+		).asTuple()
 
 		if (err) {
 			console.error("[svelte-i18n] Failed to load all translations", { langs }, err)
