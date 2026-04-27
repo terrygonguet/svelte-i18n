@@ -1,6 +1,6 @@
 {
 	"name": "@terrygonguet/svelte-i18n",
-	"version": "1.0.0-gamma.2",
+	"version": "1.0.0-gamma.3",
 	"license": "MIT",
 	"scripts": {
 		"dev": "nodemon --exec \"npm run build\" --watch src --ext ts,svelte,html",
@@ -38,7 +38,7 @@
 		}
 	},
 	"peerDependencies": {
-		"@sveltejs/kit": "^2.27.0",
+		"@sveltejs/kit": "^2.58.0",
 		"svelte": "^5.55.1"
 	},
 	"devDependencies": {
@@ -52,7 +52,7 @@
 		"publint": "^0.3.18",
 		"svelte-check": "^4.4.6",
 		"typescript": "^6.0.3",
-		"vite": "^8.0.9"
+		"vite": "^8.0.10"
 	},
 	"dependencies": {
 		"@terrygonguet/utils": "^0.11.0"
