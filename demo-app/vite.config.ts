@@ -15,6 +15,9 @@ export default defineConfig({
 	server: {
 		port: parseInt(process.env.PORT!) || undefined,
 	},
+	build: {
+		sourcemap: true,
+	},
 })
 
 function transformMD(): Plugin {
